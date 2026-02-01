@@ -1,6 +1,7 @@
 export { createUserRepository, type UserRepository } from './user.repository'
 export {
   createDailyLogRepository,
+  dailyLogRepository,
   type DailyLogRepository,
   type StreakInfo,
 } from './daily-log.repository'
@@ -12,3 +13,8 @@ export {
   createNotificationRepository,
   type NotificationRepository,
 } from './notification.repository'
+export {
+  InvitationRepository,
+  invitationRepository,
+  type CreateInvitationData,
+} from './invitation.repository'

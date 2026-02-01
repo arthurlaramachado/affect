@@ -7,6 +7,7 @@ const envSchema = z.object({
   GOOGLE_API_KEY: z.string().min(1),
   RESEND_API_KEY: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url().optional().default('http://localhost:3000'),
+  EMAIL_FROM: z.string().optional().default('Affect <noreply@affect.health>'),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -23,3 +24,14 @@ function getEnv(): Env {
 }
 
 export const env = getEnv()
+
+export function getEnvVar<K extends keyof Env>(key: K, fallback?: Env[K]): Env[K] {
+  const value = process.env[key]
+  if (value !== undefined) {
+    return value as Env[K]
+  }
+  if (fallback !== undefined) {
+    return fallback
+  }
+  throw new Error(`Missing environment variable: ${key}`)
+}

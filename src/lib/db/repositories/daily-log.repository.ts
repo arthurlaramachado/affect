@@ -1,6 +1,7 @@
 import { eq, desc } from 'drizzle-orm'
 import { dailyLogs, type DailyLog, type NewDailyLog } from '../schema'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { db } from '@/lib/db'
 
 export interface StreakInfo {
   currentStreak: number
@@ -164,3 +165,5 @@ export function createDailyLogRepository(db: NodePgDatabase): DailyLogRepository
     },
   }
 }
+
+export const dailyLogRepository = createDailyLogRepository(db as unknown as NodePgDatabase)

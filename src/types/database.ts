@@ -7,6 +7,8 @@ export type NotificationType =
   | 'follow_up_accepted'
   | 'follow_up_declined'
 
+export type InvitationStatus = 'pending' | 'accepted' | 'expired'
+
 export interface GeminiAnalysis {
   mood_score: number
   risk_flags: {
