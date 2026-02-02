@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { FileHandler } from '@/lib/services/gemini/file-handler'
-import { GeminiService, GeminiServiceError } from '@/lib/services/gemini/gemini.service'
 import { dailyLogRepository } from '@/lib/db/repositories'
+import { parseGeminiResponse, type GeminiAnalysis } from '@/lib/services/gemini/schemas'
 import type { User } from '@/lib/db/schema'
-import type { GeminiAnalysis } from '@/lib/services/gemini/schemas'
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+const DEFAULT_MODEL = 'gemini-2.0-flash'
+
+function getModelName(): string {
+  return process.env.GEMINI_MODEL || DEFAULT_MODEL
+}
 
 interface AnalyzeResult {
   success: boolean
@@ -21,42 +25,7 @@ interface AnalyzeResult {
   error?: string
 }
 
-// Create services - these would be properly initialized in production
-function createGeminiService(): GeminiService {
-  const apiKey = process.env.GOOGLE_API_KEY
-  if (!apiKey) {
-    throw new Error('GOOGLE_API_KEY not configured')
-  }
-
-  // Import the Google AI SDK dynamically
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { GoogleGenAI } = require('@google/genai')
-  const genai = new GoogleGenAI({ apiKey })
-
-  return new GeminiService({
-    filesApi: {
-      upload: async (params) => {
-        const result = await genai.files.upload({
-          file: new Blob([new Uint8Array(params.media.data)], { type: params.media.mimeType }),
-          config: {
-            mimeType: params.file.mimeType,
-            displayName: params.file.displayName,
-          },
-        })
-        return { file: { uri: result.uri, name: result.name } }
-      },
-      get: async (name) => {
-        const result = await genai.files.get({ name })
-        return { state: result.state }
-      },
-      delete: async (name) => {
-        await genai.files.delete({ name })
-      },
-    },
-    generateContent: async (params) => {
-      const model = genai.getGenerativeModel({
-        model: params.model,
-        systemInstruction: `You are an expert Board-Certified Psychiatrist conducting a remote Mental Status Examination (MSE). Your goal is to analyze the patient's video input to identify "Digital Biomarkers" of mental health.
+const SYSTEM_PROMPT = `You are an expert Board-Certified Psychiatrist conducting a remote Mental Status Examination (MSE). Your goal is to analyze the patient's video input to identify "Digital Biomarkers" of mental health.
 
 ANALYSIS PROTOCOL:
 1. Psychomotor: Look for "Psychomotor Retardation" (slowing) or "Agitation" (fidgeting).
@@ -77,20 +46,64 @@ OUTPUT: Return strictly valid JSON (no markdown) with this schema:
     "eye_contact": "normal" | "avoidant"
   },
   "clinical_summary": "A concise 2-sentence medical abstract describing the patient's presentation."
-}`,
-        generationConfig: {
-          responseMimeType: params.config?.responseMimeType || 'application/json',
-        },
-      })
+}`
 
-      const result = await model.generateContent(params.contents)
-      return {
-        response: {
-          text: () => result.response.text(),
-        },
-      }
-    },
+async function analyzeVideoWithGemini(filePath: string): Promise<GeminiAnalysis> {
+  const apiKey = process.env.GOOGLE_API_KEY
+  if (!apiKey) {
+    throw new Error('GOOGLE_API_KEY not configured')
+  }
+
+  // Import the new Google GenAI SDK
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { GoogleGenAI, createUserContent, createPartFromUri } = require('@google/genai')
+
+  const ai = new GoogleGenAI({ apiKey })
+
+  // 1. Upload the video file
+  const uploadResult = await ai.files.upload({
+    file: filePath,
+    config: { mimeType: 'video/mp4' },
   })
+
+  // 2. Wait for file to be processed
+  let file = uploadResult
+  while (file.state === 'PROCESSING') {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    file = await ai.files.get({ name: file.name })
+  }
+
+  if (file.state === 'FAILED') {
+    throw new Error('Video processing failed')
+  }
+
+  try {
+    // 3. Generate content with the video
+    const response = await ai.models.generateContent({
+      model: getModelName(),
+      contents: createUserContent([
+        createPartFromUri(file.uri, file.mimeType),
+        `${SYSTEM_PROMPT}\n\nAnalyze this patient video and provide your assessment.`,
+      ]),
+    })
+
+    // 4. Parse the response
+    const responseText = response.text
+    const parsed = parseGeminiResponse(responseText)
+
+    if (!parsed.success) {
+      throw new Error(`Invalid analysis response: ${parsed.error}`)
+    }
+
+    return parsed.data
+  } finally {
+    // 5. Clean up - delete the uploaded file
+    try {
+      await ai.files.delete({ name: file.name })
+    } catch (deleteError) {
+      console.error('Failed to delete file from Gemini:', deleteError)
+    }
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeResult>> {
@@ -142,10 +155,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
 
     // 4. Process video with transient storage
     const fileHandler = new FileHandler()
-    const geminiService = createGeminiService()
 
     const analysis = await fileHandler.withTempFile(videoFile, async (tempPath) => {
-      return await geminiService.processVideo(tempPath)
+      return await analyzeVideoWithGemini(tempPath)
     })
 
     // 5. Determine risk flag
@@ -176,15 +188,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
   } catch (error) {
     console.error('Video analysis error:', error)
 
-    if (error instanceof GeminiServiceError) {
-      return NextResponse.json(
-        { success: false, error: `Analysis failed: ${error.message}` },
-        { status: 500 }
-      )
-    }
-
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     )
   }

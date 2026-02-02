@@ -3,7 +3,11 @@ import { parseGeminiResponse, PSYCHIATRIST_SYSTEM_PROMPT, type GeminiAnalysis } 
 
 const MAX_POLL_ATTEMPTS = 30
 const POLL_INTERVAL_MS = 1000
-const MODEL_NAME = 'gemini-2.0-flash'
+const DEFAULT_MODEL = 'gemini-2.0-flash'
+
+function getModelName(): string {
+  return process.env.GEMINI_MODEL || DEFAULT_MODEL
+}
 
 export class GeminiServiceError extends Error {
   constructor(message: string, public code: string) {
@@ -13,7 +17,7 @@ export class GeminiServiceError extends Error {
 }
 
 interface FilesApi {
-  upload: (params: { file: { mimeType: string; displayName: string }; media: { data: Buffer; mimeType: string } }) => Promise<{ file: { uri: string; name: string } }>
+  upload: (filePath: string, mimeType: string, displayName: string) => Promise<{ uri: string; name: string }>
   get: (name: string) => Promise<{ state: string }>
   delete: (name: string) => Promise<void>
 }
@@ -24,43 +28,29 @@ type GenerateContentFn = (params: {
   config?: { responseMimeType?: string }
 }) => Promise<{ response: { text: () => string } }>
 
-type ReadFileFn = (path: string) => Promise<Buffer>
-
 interface GeminiServiceOptions {
   filesApi: FilesApi
   generateContent: GenerateContentFn
-  readFile?: ReadFileFn
 }
 
 export class GeminiService {
   private filesApi: FilesApi
   private generateContent: GenerateContentFn
-  private readFile: ReadFileFn
 
   constructor(options: GeminiServiceOptions) {
     this.filesApi = options.filesApi
     this.generateContent = options.generateContent
-    this.readFile = options.readFile || fsPromises.readFile
   }
 
   async uploadFile(filePath: string): Promise<string> {
     try {
-      const fileData = await this.readFile(filePath)
       const mimeType = this.getMimeType(filePath)
+      const displayName = `scan_${Date.now()}`
 
-      const uploadResult = await this.filesApi.upload({
-        file: {
-          mimeType,
-          displayName: `scan_${Date.now()}`,
-        },
-        media: {
-          data: fileData,
-          mimeType,
-        },
-      })
+      const uploadResult = await this.filesApi.upload(filePath, mimeType, displayName)
 
-      const fileUri = uploadResult.file.uri
-      const fileName = this.extractFileName(fileUri)
+      const fileUri = uploadResult.uri
+      const fileName = uploadResult.name
 
       // Poll until file is ACTIVE
       await this.waitForFileActive(fileName)
@@ -104,7 +94,7 @@ export class GeminiService {
   async analyzeVideo(fileUri: string): Promise<GeminiAnalysis> {
     try {
       const result = await this.generateContent({
-        model: MODEL_NAME,
+        model: getModelName(),
         contents: [
           {
             role: 'user',

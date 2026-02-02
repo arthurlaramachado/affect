@@ -107,3 +107,8 @@ export function createFollowUpRepository(db: NodePgDatabase): FollowUpRepository
     },
   }
 }
+
+// Import db here to avoid circular dependencies
+import { db } from '@/lib/db'
+
+export const followUpRepository = createFollowUpRepository(db as unknown as NodePgDatabase)

@@ -8,7 +8,6 @@ describe('GeminiService', () => {
   let mockFilesGet: ReturnType<typeof vi.fn>
   let mockFilesDelete: ReturnType<typeof vi.fn>
   let mockGenerateContent: ReturnType<typeof vi.fn>
-  let mockReadFile: ReturnType<typeof vi.fn>
 
   const validAnalysisResponse: GeminiAnalysis = {
     mood_score: 5,
@@ -29,7 +28,8 @@ describe('GeminiService', () => {
     vi.clearAllMocks()
 
     mockFilesUpload = vi.fn().mockResolvedValue({
-      file: { uri: 'https://generativelanguage.googleapis.com/v1/files/file-123' },
+      uri: 'https://generativelanguage.googleapis.com/v1/files/file-123',
+      name: 'file-123',
     })
     mockFilesGet = vi.fn().mockResolvedValue({
       state: 'ACTIVE',
@@ -40,7 +40,6 @@ describe('GeminiService', () => {
         text: () => JSON.stringify(validAnalysisResponse),
       },
     })
-    mockReadFile = vi.fn().mockResolvedValue(Buffer.from('video content'))
 
     service = new GeminiService({
       filesApi: {
@@ -49,7 +48,6 @@ describe('GeminiService', () => {
         delete: mockFilesDelete,
       },
       generateContent: mockGenerateContent,
-      readFile: mockReadFile,
     })
   })
 
@@ -57,8 +55,7 @@ describe('GeminiService', () => {
     it('should upload file and return URI', async () => {
       const result = await service.uploadFile('/tmp/video.mp4')
 
-      expect(mockReadFile).toHaveBeenCalledWith('/tmp/video.mp4')
-      expect(mockFilesUpload).toHaveBeenCalled()
+      expect(mockFilesUpload).toHaveBeenCalledWith('/tmp/video.mp4', 'video/mp4', expect.stringContaining('scan_'))
       expect(result).toBe('https://generativelanguage.googleapis.com/v1/files/file-123')
     })
 

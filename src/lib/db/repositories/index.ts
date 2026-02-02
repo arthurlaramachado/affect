@@ -7,10 +7,12 @@ export {
 } from './daily-log.repository'
 export {
   createFollowUpRepository,
+  followUpRepository,
   type FollowUpRepository,
 } from './follow-up.repository'
 export {
   createNotificationRepository,
+  notificationRepository,
   type NotificationRepository,
 } from './notification.repository'
 export {

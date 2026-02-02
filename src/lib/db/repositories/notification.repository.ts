@@ -105,3 +105,8 @@ export function createNotificationRepository(
     },
   }
 }
+
+// Import db here to avoid circular dependencies
+import { db } from '@/lib/db'
+
+export const notificationRepository = createNotificationRepository(db as unknown as NodePgDatabase)
