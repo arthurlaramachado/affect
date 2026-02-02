@@ -15,6 +15,13 @@
       "when": 1770035076809,
       "tag": "0001_useful_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770056347106,
+      "tag": "0002_tired_roughhouse",
+      "breakpoints": true
     }
   ]
 }

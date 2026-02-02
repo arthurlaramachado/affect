@@ -40,6 +40,9 @@ export const users = pgTable('users', {
   image: text('image'),
   role: userRoleEnum('role').notNull().default('patient'),
   doctorId: text('doctor_id'),
+  // Reminder settings for patients
+  reminderEnabled: boolean('reminder_enabled').default(false).notNull(),
+  reminderTime: text('reminder_time'), // HH:MM format (24h)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

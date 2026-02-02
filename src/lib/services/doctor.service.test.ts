@@ -193,4 +193,40 @@ describe('DoctorService', () => {
       expect(result.doctorId).toBe('doctor-1')
     })
   })
+
+  describe('verifyPatientBelongsToDoctor', () => {
+    it('should return true when patient belongs to doctor', async () => {
+      mockUserRepository.findById.mockResolvedValue(mockPatient)
+
+      const result = await service.verifyPatientBelongsToDoctor('doctor-1', 'patient-1')
+
+      expect(result).toBe(true)
+    })
+
+    it('should throw NOT_FOUND when patient does not exist', async () => {
+      mockUserRepository.findById.mockResolvedValue(null)
+
+      await expect(
+        service.verifyPatientBelongsToDoctor('doctor-1', 'nonexistent')
+      ).rejects.toThrow('Patient not found')
+    })
+
+    it('should throw UNAUTHORIZED when patient belongs to different doctor', async () => {
+      const otherDoctorPatient = { ...mockPatient, doctorId: 'other-doctor' }
+      mockUserRepository.findById.mockResolvedValue(otherDoctorPatient)
+
+      await expect(
+        service.verifyPatientBelongsToDoctor('doctor-1', 'patient-1')
+      ).rejects.toThrow('Unauthorized')
+    })
+
+    it('should throw UNAUTHORIZED when patient has no doctor', async () => {
+      const noDoctor = { ...mockPatient, doctorId: null }
+      mockUserRepository.findById.mockResolvedValue(noDoctor)
+
+      await expect(
+        service.verifyPatientBelongsToDoctor('doctor-1', 'patient-1')
+      ).rejects.toThrow('Unauthorized')
+    })
+  })
 })

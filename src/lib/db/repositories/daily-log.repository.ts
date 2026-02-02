@@ -13,6 +13,7 @@ export interface StreakInfo {
 export interface DailyLogRepository {
   findById(id: string): Promise<DailyLog | null>
   findByUserId(userId: string, limit?: number): Promise<DailyLog[]>
+  findAllByUserId(userId: string): Promise<DailyLog[]>
   create(data: NewDailyLog): Promise<DailyLog>
   getStreak(userId: string): Promise<StreakInfo>
   getLatestByUserId(userId: string): Promise<DailyLog | null>
@@ -125,6 +126,14 @@ export function createDailyLogRepository(db: NodePgDatabase): DailyLogRepository
         .where(eq(dailyLogs.userId, userId))
         .orderBy(desc(dailyLogs.createdAt))
         .limit(limit)
+    },
+
+    async findAllByUserId(userId: string): Promise<DailyLog[]> {
+      return db
+        .select()
+        .from(dailyLogs)
+        .where(eq(dailyLogs.userId, userId))
+        .orderBy(desc(dailyLogs.createdAt))
     },
 
     async create(data: NewDailyLog): Promise<DailyLog> {

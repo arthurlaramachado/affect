@@ -203,4 +203,51 @@ describe('DailyLogRepository', () => {
       expect(result).toBeNull()
     })
   })
+
+  describe('findAllByUserId', () => {
+    it('should return all logs for a user without limit', async () => {
+      const logs: DailyLog[] = [
+        {
+          id: 'log-3',
+          userId: 'user-123',
+          moodScore: 8,
+          riskFlag: false,
+          analysisJson: mockAnalysis,
+          createdAt: new Date('2024-01-03'),
+        },
+        {
+          id: 'log-2',
+          userId: 'user-123',
+          moodScore: 7,
+          riskFlag: false,
+          analysisJson: mockAnalysis,
+          createdAt: new Date('2024-01-02'),
+        },
+        {
+          id: 'log-1',
+          userId: 'user-123',
+          moodScore: 6,
+          riskFlag: false,
+          analysisJson: mockAnalysis,
+          createdAt: new Date('2024-01-01'),
+        },
+      ]
+
+      mockDb.orderBy.mockResolvedValueOnce(logs)
+
+      const result = await dailyLogRepository.findAllByUserId('user-123')
+
+      expect(result).toEqual(logs)
+      expect(mockDb.where).toHaveBeenCalled()
+      expect(mockDb.orderBy).toHaveBeenCalled()
+    })
+
+    it('should return empty array when user has no logs', async () => {
+      mockDb.orderBy.mockResolvedValueOnce([])
+
+      const result = await dailyLogRepository.findAllByUserId('user-123')
+
+      expect(result).toEqual([])
+    })
+  })
 })

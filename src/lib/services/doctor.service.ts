@@ -133,4 +133,18 @@ export class DoctorService {
   async linkPatientToDoctor(patientId: string, doctorId: string): Promise<User> {
     return this.userRepository.updateDoctorId(patientId, doctorId)
   }
+
+  async verifyPatientBelongsToDoctor(doctorId: string, patientId: string): Promise<boolean> {
+    const patient = await this.userRepository.findById(patientId)
+
+    if (!patient) {
+      throw new DoctorServiceError('Patient not found', 'NOT_FOUND')
+    }
+
+    if (patient.doctorId !== doctorId) {
+      throw new DoctorServiceError('Unauthorized', 'UNAUTHORIZED')
+    }
+
+    return true
+  }
 }
