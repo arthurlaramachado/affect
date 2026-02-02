@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Card,
@@ -35,6 +35,13 @@ export function VideoCheckIn() {
 
   const MAX_RECORDING_TIME = 60
 
+  // Ensure video element gets the stream when recording starts
+  useEffect(() => {
+    if (recordingState === 'recording' && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current
+    }
+  }, [recordingState])
+
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -43,6 +50,7 @@ export function VideoCheckIn() {
       })
 
       streamRef.current = stream
+      // Also try to set immediately in case the video element exists
       if (videoRef.current) {
         videoRef.current.srcObject = stream
       }
