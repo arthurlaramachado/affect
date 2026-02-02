@@ -37,6 +37,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       data: {
         email: result.invitation!.email,
         expiresAt: result.invitation!.expiresAt.toISOString(),
+        doctorId: result.invitation!.doctorId,
       },
     })
   } catch (error) {

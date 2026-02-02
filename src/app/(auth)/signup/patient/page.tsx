@@ -22,6 +22,7 @@ import {
 interface InvitationData {
   email: string
   expiresAt: string
+  doctorId: string
 }
 
 export default function PatientSignupPage() {
@@ -108,6 +109,18 @@ export default function PatientSignupPage() {
 
       if (result.error) {
         setError(result.error.message || 'Failed to create account')
+        return
+      }
+
+      const linkResponse = await fetch('/api/patient/link-doctor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorId: acceptData.data.doctorId }),
+      })
+
+      if (!linkResponse.ok) {
+        const linkData = await linkResponse.json()
+        setError(linkData.error || 'Failed to link to doctor')
         return
       }
 

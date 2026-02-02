@@ -1,4 +1,4 @@
-export { createUserRepository, type UserRepository } from './user.repository'
+export { createUserRepository, userRepository, type UserRepository } from './user.repository'
 export {
   createDailyLogRepository,
   dailyLogRepository,
