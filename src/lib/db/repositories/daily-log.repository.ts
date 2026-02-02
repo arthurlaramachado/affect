@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 export interface StreakInfo {
   currentStreak: number
   longestStreak: number
+  totalCheckIns: number
   lastCheckIn: Date | null
 }
 

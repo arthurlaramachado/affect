@@ -27,7 +27,7 @@ export default async function PatientDashboardPage() {
 
   const recentLogs = await dailyLogRepository.findByUserId(user.id, 7)
   const latestLog = recentLogs[0]
-  const streakInfo = await dailyLogRepository.getStreakInfo(user.id)
+  const streakInfo = await dailyLogRepository.getStreak(user.id)
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">

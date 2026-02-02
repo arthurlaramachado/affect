@@ -6,7 +6,7 @@ import type { User } from '@/lib/db/schema'
 import type { UserRepository } from '@/lib/db/repositories'
 
 const linkDoctorSchema = z.object({
-  doctorId: z.string().uuid('Invalid doctor ID format'),
+  doctorId: z.string().min(1, 'Doctor ID is required'),
 })
 
 export type GetSessionFn = () => Promise<{
