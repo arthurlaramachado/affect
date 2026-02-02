@@ -277,12 +277,12 @@ export function VideoCheckIn() {
           </div>
         )}
 
-        {recordingState === 'complete' && analysisResult && (
+        {recordingState === 'complete' && (
           <div className="space-y-6">
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+            <div className="text-center py-8">
+              <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
                 <svg
-                  className="w-8 h-8 text-green-600"
+                  className="w-10 h-10 text-green-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -295,37 +295,14 @@ export function VideoCheckIn() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold">Check-in Complete!</h3>
-              <p className="text-gray-600">Thank you for sharing how you're feeling today.</p>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-2">Check-in Complete!</h3>
+              <p className="text-gray-600 text-lg">Thank you for sharing how you're feeling today.</p>
+              <p className="text-gray-500 text-sm mt-4">
+                Your check-in has been recorded. Keep up the great work! 💪
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-sm text-gray-500">Mood Score</p>
-                  <p className="text-3xl font-bold">{analysisResult.moodScore}/10</p>
-                </CardContent>
-              </Card>
-              <Card className={analysisResult.riskFlag ? 'border-red-200 bg-red-50' : ''}>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-sm text-gray-500">Risk Status</p>
-                  <p className={`text-lg font-semibold ${analysisResult.riskFlag ? 'text-red-600' : 'text-green-600'}`}>
-                    {analysisResult.riskFlag ? 'Flagged' : 'Normal'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-700">{analysisResult.clinicalSummary}</p>
-              </CardContent>
-            </Card>
-
-            <Button onClick={goToDashboard} className="w-full">
+            <Button onClick={goToDashboard} className="w-full" size="lg">
               Return to Dashboard
             </Button>
           </div>
