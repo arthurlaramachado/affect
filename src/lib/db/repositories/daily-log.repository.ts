@@ -35,7 +35,7 @@ function isConsecutiveDay(current: Date, previous: Date): boolean {
 
 function calculateStreak(logs: DailyLog[]): StreakInfo {
   if (logs.length === 0) {
-    return { currentStreak: 0, longestStreak: 0, lastCheckIn: null }
+    return { currentStreak: 0, longestStreak: 0, totalCheckIns: 0, lastCheckIn: null }
   }
 
   const today = new Date()
@@ -101,6 +101,7 @@ function calculateStreak(logs: DailyLog[]): StreakInfo {
   return {
     currentStreak,
     longestStreak,
+    totalCheckIns: logs.length,
     lastCheckIn: sortedLogs[0].createdAt,
   }
 }
