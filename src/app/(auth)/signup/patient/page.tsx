@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { signUp } from '@/lib/auth/client'
+import { signIn } from '@/lib/auth/client'
 import { signupSchema, type SignupFormData } from '@/lib/auth/schemas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,43 +84,33 @@ export default function PatientSignupPage() {
     setError(null)
 
     try {
-      const acceptResponse = await fetch(`/api/invitations/${token}/accept`, {
+      // Single atomic signup that creates user AND links to doctor
+      const response = await fetch('/api/auth/signup-patient', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: data.name,
+          email: data.email,
           password: data.password,
+          name: data.name,
+          invitationToken: token,
         }),
       })
 
-      const acceptData = await acceptResponse.json()
+      const result = await response.json()
 
-      if (!acceptResponse.ok || !acceptData.success) {
-        setError(acceptData.error || 'Failed to accept invitation')
+      if (!response.ok || !result.success) {
+        setError(result.error || 'Failed to create account')
         return
       }
 
-      const result = await signUp.email({
+      // Sign in the newly created user
+      const signInResult = await signIn.email({
         email: data.email,
         password: data.password,
-        name: data.name,
-        role: 'patient',
-      } as Parameters<typeof signUp.email>[0])
-
-      if (result.error) {
-        setError(result.error.message || 'Failed to create account')
-        return
-      }
-
-      const linkResponse = await fetch('/api/patient/link-doctor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doctorId: acceptData.data.doctorId }),
       })
 
-      if (!linkResponse.ok) {
-        const linkData = await linkResponse.json()
-        setError(linkData.error || 'Failed to link to doctor')
+      if (signInResult.error) {
+        setError('Account created but failed to sign in. Please try logging in.')
         return
       }
 
