@@ -29,9 +29,14 @@ export type GetSessionFn = () => Promise<{
   user: { id: string; role?: string } | null
 } | null>
 
+export interface UserRepositoryInterface {
+  findById(id: string): Promise<{ id: string; name: string } | null>
+}
+
 export interface Dependencies {
   getSession: GetSessionFn
   followUpService: FollowUpServiceInterface
+  userRepository?: UserRepositoryInterface
 }
 
 export interface CreateFollowUpInput {
@@ -115,11 +120,24 @@ export async function handleGetFollowUps(deps: Dependencies): Promise<NextRespon
 
     if (user.role === 'doctor') {
       followUps = await deps.followUpService.getActiveForDoctor(user.id)
+      return NextResponse.json({ success: true, data: followUps })
     } else {
       followUps = await deps.followUpService.getPendingForPatient(user.id)
-    }
 
-    return NextResponse.json({ success: true, data: followUps })
+      const followUpsWithDoctorInfo = await Promise.all(
+        followUps.map(async (followUp) => {
+          const doctor = deps.userRepository
+            ? await deps.userRepository.findById(followUp.doctorId)
+            : null
+          return {
+            ...followUp,
+            doctorName: doctor?.name || 'Unknown',
+          }
+        })
+      )
+
+      return NextResponse.json({ success: true, data: followUpsWithDoctorInfo })
+    }
   } catch {
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
@@ -130,10 +148,12 @@ export async function handleGetFollowUps(deps: Dependencies): Promise<NextRespon
 
 // Import real dependencies
 import { followUpService } from '@/lib/services'
+import { userRepository } from '@/lib/db/repositories'
 
 const defaultDependencies: Dependencies = {
   getSession: defaultGetSession,
   followUpService,
+  userRepository,
 }
 
 export async function POST(request: NextRequest) {

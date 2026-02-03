@@ -15,8 +15,3 @@ export {
   notificationRepository,
   type NotificationRepository,
 } from './notification.repository'
-export {
-  InvitationRepository,
-  invitationRepository,
-  type CreateInvitationData,
-} from './invitation.repository'

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { signIn } from '@/lib/auth/client'
+import { signUp } from '@/lib/auth/client'
 import { signupSchema, type SignupFormData } from '@/lib/auth/schemas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,155 +19,73 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-interface InvitationData {
-  email: string
-  expiresAt: string
-  doctorId: string
-}
-
 export default function PatientSignupPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
-
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isValidating, setIsValidating] = useState(true)
-  const [invitation, setInvitation] = useState<InvitationData | null>(null)
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   })
 
-  useEffect(() => {
-    async function validateToken() {
-      if (!token) {
-        setError('No invitation token provided. Please use the link from your invitation email.')
-        setIsValidating(false)
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/invitations/${token}`)
-        const data = await response.json()
-
-        if (!response.ok || !data.success) {
-          setError(data.error || 'Invalid or expired invitation')
-          setIsValidating(false)
-          return
-        }
-
-        setInvitation(data.data)
-        setValue('email', data.data.email)
-        setIsValidating(false)
-      } catch (err) {
-        setError('Failed to validate invitation. Please try again.')
-        setIsValidating(false)
-      }
-    }
-
-    validateToken()
-  }, [token, setValue])
-
   const onSubmit = async (data: SignupFormData) => {
-    if (!token || !invitation) {
-      setError('Invalid invitation')
-      return
-    }
-
     setIsLoading(true)
     setError(null)
 
     try {
-      // Single atomic signup that creates user AND links to doctor
-      const response = await fetch('/api/auth/signup-patient', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          name: data.name,
-          invitationToken: token,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        setError(result.error || 'Failed to create account')
-        return
-      }
-
-      // Sign in the newly created user
-      const signInResult = await signIn.email({
+      const result = await signUp.email({
         email: data.email,
         password: data.password,
-      })
+        name: data.name,
+        role: 'patient',
+      } as Parameters<typeof signUp.email>[0])
 
-      if (signInResult.error) {
-        setError('Account created but failed to sign in. Please try logging in.')
+      if (result.error) {
+        setError(result.error.message || 'Failed to create account')
         return
       }
 
       router.push('/patient')
       router.refresh()
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isValidating) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Validating invitation...</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (!invitation) {
-    return (
-      <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-red-600">
-            Invalid Invitation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center">
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">
-            If you believe this is an error, please contact your healthcare provider
-            for a new invitation.
-          </p>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <Link href="/login">
-            <Button variant="outline">Go to Login</Button>
-          </Link>
-        </CardFooter>
-      </Card>
-    )
-  }
-
   return (
     <Card>
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">
-          Complete Registration
-        </CardTitle>
-        <CardDescription className="text-center">
-          Create your account to start your mental health journey
+        <div className="flex items-center space-x-2">
+          <Link
+            href="/signup"
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </Link>
+          <CardTitle className="text-2xl font-bold">
+            Patient Registration
+          </CardTitle>
+        </div>
+        <CardDescription>
+          Create your account to start tracking your mental wellness
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -197,13 +115,13 @@ export default function PatientSignupPage() {
             <Input
               id="email"
               type="email"
+              placeholder="you@example.com"
               {...register('email')}
-              disabled
-              className="bg-gray-50"
+              disabled={isLoading}
             />
-            <p className="text-xs text-gray-500">
-              Email is set from your invitation
-            </p>
+            {errors.email && (
+              <p className="text-sm text-red-600">{errors.email.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -218,9 +136,6 @@ export default function PatientSignupPage() {
             {errors.password && (
               <p className="text-sm text-red-600">{errors.password.message}</p>
             )}
-            <p className="text-xs text-gray-500">
-              Must be at least 8 characters with uppercase, lowercase, number, and special character
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -240,7 +155,7 @@ export default function PatientSignupPage() {
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {isLoading ? 'Creating account...' : 'Create Patient Account'}
           </Button>
         </form>
       </CardContent>

@@ -24,6 +24,7 @@ function createMockFollowUpRepository(): FollowUpRepository {
 function createMockUserRepository(): UserRepository {
   return {
     findById: vi.fn(),
+    updateDoctorId: vi.fn(),
   }
 }
 
@@ -150,8 +151,8 @@ describe('FollowUpService', () => {
   })
 
   describe('respondToFollowUp', () => {
-    it('should accept a follow-up and notify doctor', async () => {
-      const mockFollowUp = createMockFollowUp({ status: 'pending' })
+    it('should accept a follow-up, link patient to doctor, and notify doctor', async () => {
+      const mockFollowUp = createMockFollowUp({ status: 'pending', doctorId: 'doctor-1', patientId: 'patient-1' })
       vi.mocked(mockFollowUpRepo.findById).mockResolvedValue(mockFollowUp)
 
       vi.mocked(mockUserRepo.findById).mockResolvedValue({
@@ -171,6 +172,7 @@ describe('FollowUpService', () => {
 
       expect(result.status).toBe('accepted')
       expect(mockFollowUpRepo.updateStatus).toHaveBeenCalledWith('follow-up-1', 'accepted')
+      expect(mockUserRepo.updateDoctorId).toHaveBeenCalledWith('patient-1', 'doctor-1')
       expect(mockNotificationService.createFollowUpAcceptedNotification).toHaveBeenCalledWith(
         'doctor-1',
         'John Doe'

@@ -25,11 +25,6 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'follow_up_declined',
 ])
 
-export const invitationStatusEnum = pgEnum('invitation_status', [
-  'pending',
-  'accepted',
-  'expired',
-])
 
 // Better Auth required tables
 export const users = pgTable('users', {
@@ -182,24 +177,6 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }))
 
-export const invitations = pgTable('invitations', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  doctorId: text('doctor_id')
-    .references(() => users.id, { onDelete: 'cascade' })
-    .notNull(),
-  email: text('email').notNull(),
-  token: text('token').notNull().unique(),
-  status: invitationStatusEnum('status').default('pending').notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
-
-export const invitationsRelations = relations(invitations, ({ one }) => ({
-  doctor: one(users, {
-    fields: [invitations.doctorId],
-    references: [users.id],
-  }),
-}))
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -215,5 +192,3 @@ export type FollowUp = typeof followUps.$inferSelect
 export type NewFollowUp = typeof followUps.$inferInsert
 export type Notification = typeof notifications.$inferSelect
 export type NewNotification = typeof notifications.$inferInsert
-export type Invitation = typeof invitations.$inferSelect
-export type NewInvitation = typeof invitations.$inferInsert

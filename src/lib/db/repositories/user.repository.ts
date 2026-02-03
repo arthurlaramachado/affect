@@ -80,9 +80,12 @@ export function createUserRepository(db: NodePgDatabase): UserRepository {
         .select()
         .from(users)
         .where(
-          or(
-            eq(users.email, searchQuery),
-            ilike(users.name, `%${searchQuery}%`)
+          and(
+            eq(users.role, 'patient'),
+            or(
+              eq(users.email, searchQuery),
+              ilike(users.name, `%${searchQuery}%`)
+            )
           )
         )
         .limit(limit)

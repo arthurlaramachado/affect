@@ -48,33 +48,33 @@ export default function SignupPage() {
             </div>
           </Link>
 
-          <div className="p-6 border rounded-lg bg-gray-50 border-gray-200">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gray-200 rounded-full">
-                <svg
-                  className="w-6 h-6 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg text-gray-600">I&apos;m a Patient</h3>
-                <p className="text-sm text-gray-500">
-                  Patients can only join through an invitation from their doctor.
-                  <br />
-                  Please check your email for an invitation link.
-                </p>
+          <Link href="/signup/patient" className="block">
+            <div className="p-6 border rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-green-100 rounded-full">
+                  <svg
+                    className="w-6 h-6 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">I&apos;m a Patient</h3>
+                  <p className="text-sm text-gray-600">
+                    Track your mental wellness and connect with your healthcare provider
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
 
         <div className="text-sm text-center text-gray-600 pt-4">

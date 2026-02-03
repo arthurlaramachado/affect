@@ -161,6 +161,49 @@ describe('FollowUpRepository', () => {
     })
   })
 
+  describe('getPendingCountByPatientId', () => {
+    it('should return the count of pending follow-ups', async () => {
+      const pendingFollowUps: FollowUp[] = [
+        {
+          id: 'followup-1',
+          doctorId: 'doctor-1',
+          patientId: 'patient-123',
+          status: 'pending',
+          message: 'Request 1',
+          requestedAt: new Date(),
+          respondedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'followup-2',
+          doctorId: 'doctor-2',
+          patientId: 'patient-123',
+          status: 'pending',
+          message: 'Request 2',
+          requestedAt: new Date(),
+          respondedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]
+
+      mockDb.where.mockResolvedValueOnce(pendingFollowUps)
+
+      const result = await followUpRepository.getPendingCountByPatientId('patient-123')
+
+      expect(result).toBe(2)
+    })
+
+    it('should return 0 when no pending follow-ups', async () => {
+      mockDb.where.mockResolvedValueOnce([])
+
+      const result = await followUpRepository.getPendingCountByPatientId('patient-123')
+
+      expect(result).toBe(0)
+    })
+  })
+
   describe('create', () => {
     it('should create a new follow-up request', async () => {
       const newFollowUp: NewFollowUp = {

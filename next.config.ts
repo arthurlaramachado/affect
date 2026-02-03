@@ -6,12 +6,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100mb',
     },
   },
-  // Increase body size limit for video uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb',
-    },
-  },
 };
 
 export default nextConfig;

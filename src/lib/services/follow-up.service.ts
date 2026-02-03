@@ -27,6 +27,7 @@ export interface NotificationService {
 
 export interface UserRepository {
   findById(id: string): Promise<{ id: string; name: string; role: string } | null>
+  updateDoctorId(userId: string, doctorId: string): Promise<unknown>
 }
 
 export interface RequestFollowUpParams {
@@ -115,6 +116,7 @@ export class FollowUpService {
     }
 
     if (action === 'accept') {
+      await this.userRepository.updateDoctorId(followUp.patientId, followUp.doctorId)
       await this.notificationService.createFollowUpAcceptedNotification(
         followUp.doctorId,
         patient.name

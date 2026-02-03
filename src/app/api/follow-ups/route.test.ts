@@ -102,6 +102,9 @@ describe('GET /api/follow-ups', () => {
         getActiveForDoctor: vi.fn(),
         getFollowUpById: vi.fn(),
       },
+      userRepository: {
+        findById: vi.fn(),
+      },
     }
   })
 
@@ -115,13 +118,17 @@ describe('GET /api/follow-ups', () => {
     expect(data.success).toBe(false)
   })
 
-  it('should return pending follow-ups for patient', async () => {
+  it('should return pending follow-ups for patient with doctor info', async () => {
     vi.mocked(mockDeps.getSession).mockResolvedValue({
       user: { id: 'patient-1', role: 'patient' },
     })
 
     const mockFollowUps = [createMockFollowUp()]
     vi.mocked(mockDeps.followUpService.getPendingForPatient).mockResolvedValue(mockFollowUps)
+    vi.mocked(mockDeps.userRepository!.findById).mockResolvedValue({
+      id: 'doctor-1',
+      name: 'Dr. Smith',
+    })
 
     const response = await handleGetFollowUps(mockDeps)
     const data = await response.json()
@@ -129,6 +136,7 @@ describe('GET /api/follow-ups', () => {
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.data).toHaveLength(1)
+    expect(data.data[0].doctorName).toBe('Dr. Smith')
   })
 
   it('should return active follow-ups for doctor', async () => {

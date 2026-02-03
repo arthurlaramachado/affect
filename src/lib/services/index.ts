@@ -30,7 +30,6 @@ export const doctorService = new DoctorService(userRepository, dailyLogRepositor
 // Re-export types and classes for testing
 export { FollowUpService, FollowUpServiceError } from './follow-up.service'
 export { NotificationService, NotificationServiceError } from './notification.service'
-export { InvitationService, InvitationError } from './invitation.service'
 export { DoctorService, DoctorServiceError } from './doctor.service'
 export {
   InsightsService,

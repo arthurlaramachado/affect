@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { InvitePatientDialog } from './InvitePatientDialog'
+import { NewFollowUpDialog } from './NewFollowUpDialog'
 import type { PatientSummary } from '@/lib/services/doctor.service'
 import type { RiskLevel } from '@/types/database'
 
@@ -65,7 +65,7 @@ function formatDate(date: Date | null): string {
 }
 
 export function DoctorDashboard({ patients, doctorName }: DoctorDashboardProps) {
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
+  const [isFollowUpDialogOpen, setIsFollowUpDialogOpen] = useState(false)
 
   const alertCount = patients.filter((p) => p.riskLevel === 'alert').length
   const driftCount = patients.filter((p) => p.riskLevel === 'drift').length
@@ -88,8 +88,8 @@ export function DoctorDashboard({ patients, doctorName }: DoctorDashboardProps) 
           <h1 className="text-3xl font-bold">Doctor Dashboard</h1>
           <p className="text-gray-600">Welcome back, Dr. {doctorName}</p>
         </div>
-        <Button onClick={() => setIsInviteDialogOpen(true)}>
-          Invite Patient
+        <Button onClick={() => setIsFollowUpDialogOpen(true)}>
+          New Follow-Up
         </Button>
       </div>
 
@@ -132,7 +132,7 @@ export function DoctorDashboard({ patients, doctorName }: DoctorDashboardProps) 
             <div className="text-center py-8 text-gray-500">
               <p>No patients yet.</p>
               <p className="text-sm mt-2">
-                Invite your first patient to get started.
+                Create a follow-up request to connect with a patient.
               </p>
             </div>
           ) : (
@@ -182,9 +182,9 @@ export function DoctorDashboard({ patients, doctorName }: DoctorDashboardProps) 
         </CardContent>
       </Card>
 
-      <InvitePatientDialog
-        open={isInviteDialogOpen}
-        onOpenChange={setIsInviteDialogOpen}
+      <NewFollowUpDialog
+        open={isFollowUpDialogOpen}
+        onOpenChange={setIsFollowUpDialogOpen}
       />
     </div>
   )

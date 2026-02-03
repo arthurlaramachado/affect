@@ -9,6 +9,7 @@ export interface FollowUpRepository {
   findByDoctorId(doctorId: string): Promise<FollowUp[]>
   findByPatientId(patientId: string): Promise<FollowUp[]>
   findPendingByPatientId(patientId: string): Promise<FollowUp[]>
+  getPendingCountByPatientId(patientId: string): Promise<number>
   create(data: NewFollowUp): Promise<FollowUp>
   updateStatus(id: string, status: FollowUpStatus): Promise<FollowUp | null>
   getAcceptedPatientsByDoctorId(doctorId: string): Promise<FollowUp[]>
@@ -71,6 +72,20 @@ export function createFollowUpRepository(db: NodePgDatabase): FollowUpRepository
           )
         )
         .orderBy(desc(followUps.createdAt))
+    },
+
+    async getPendingCountByPatientId(patientId: string): Promise<number> {
+      const result = await db
+        .select()
+        .from(followUps)
+        .where(
+          and(
+            eq(followUps.patientId, patientId),
+            eq(followUps.status, 'pending')
+          )
+        )
+
+      return result.length
     },
 
     async create(data: NewFollowUp): Promise<FollowUp> {
