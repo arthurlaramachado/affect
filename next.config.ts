@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100mb',
     },
   },
+  allowedDevOrigins: ['local-origin.dev', '*.local-origin.dev'],
 };
 
 export default nextConfig;

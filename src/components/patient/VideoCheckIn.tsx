@@ -69,8 +69,28 @@ export function VideoCheckIn() {
     }
   }, [])
 
+  const isIOS = useCallback((): boolean => {
+    if (typeof navigator === 'undefined') return false
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  }, [])
+
   const getSupportedMimeType = useCallback((): string | undefined => {
-    // Order of preference: WebM VP9 > WebM VP8 > MP4 > default
+    // iOS Safari has very limited MediaRecorder support
+    // It's better to let Safari choose its own format
+    if (isIOS()) {
+      // On iOS, try mp4 first, but if not supported, return undefined to let browser decide
+      try {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('video/mp4')) {
+          return 'video/mp4'
+        }
+      } catch {
+        // isTypeSupported might throw on some browsers
+      }
+      return undefined
+    }
+
+    // For other browsers, try in order of preference
     const mimeTypes = [
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus',
@@ -79,14 +99,19 @@ export function VideoCheckIn() {
     ]
 
     for (const mimeType of mimeTypes) {
-      if (MediaRecorder.isTypeSupported(mimeType)) {
-        return mimeType
+      try {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          return mimeType
+        }
+      } catch {
+        // isTypeSupported might throw on some browsers
+        continue
       }
     }
 
     // Let browser choose default
     return undefined
-  }, [])
+  }, [isIOS])
 
   const startRecording = useCallback(async () => {
     setError(null)
@@ -94,20 +119,54 @@ export function VideoCheckIn() {
     chunksRef.current = []
     setRecordingTime(0)
 
+    // Check if MediaRecorder is supported
+    if (typeof MediaRecorder === 'undefined') {
+      setError('Video recording is not supported on this browser. Please try using Chrome, Firefox, or Safari 14.3+.')
+      return
+    }
+
     await startCamera()
 
     if (!streamRef.current) {
       return
     }
 
+    // Try to create MediaRecorder with preferred mimeType, fallback to no options
+    let mediaRecorder: MediaRecorder
     const mimeType = getSupportedMimeType()
-    const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {}
 
-    const mediaRecorder = new MediaRecorder(streamRef.current, recorderOptions)
+    try {
+      if (mimeType) {
+        mediaRecorder = new MediaRecorder(streamRef.current, { mimeType })
+      } else {
+        // Let browser choose default format
+        mediaRecorder = new MediaRecorder(streamRef.current)
+      }
+    } catch (err) {
+      // If creation with mimeType fails, try without any options
+      try {
+        mediaRecorder = new MediaRecorder(streamRef.current)
+      } catch (fallbackErr) {
+        setError('Unable to start video recording. Please try a different browser.')
+        stopCamera()
+        return
+      }
+    }
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         chunksRef.current.push(event.data)
+      }
+    }
+
+    mediaRecorder.onerror = (event) => {
+      console.error('MediaRecorder error:', event)
+      setError('An error occurred during recording. Please try again.')
+      setRecordingState('error')
+      stopCamera()
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
       }
     }
 
@@ -138,7 +197,7 @@ export function VideoCheckIn() {
         return prev + 1
       })
     }, 1000)
-  }, [startCamera, stopCamera])
+  }, [startCamera, stopCamera, getSupportedMimeType])
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
