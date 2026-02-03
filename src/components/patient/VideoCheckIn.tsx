@@ -54,8 +54,13 @@ export function VideoCheckIn() {
 
   const startCamera = useCallback(async () => {
     try {
+      // Use flexible constraints for better iOS compatibility
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 },
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+        },
         audio: true,
       })
 
@@ -254,19 +259,70 @@ export function VideoCheckIn() {
     setError(null)
 
     try {
-      // Determine file extension from blob type
-      const extension = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm'
-      const formData = new FormData()
-      formData.append('video', recordedBlob, `check-in.${extension}`)
+      // Debug: log blob info
+      console.log('Blob type:', recordedBlob.type)
+      console.log('Blob size:', recordedBlob.size)
+
+      // Determine file extension - handle empty or unusual MIME types
+      let extension = 'webm'
+      let mimeType = recordedBlob.type || 'video/webm'
+
+      if (mimeType.includes('mp4') || mimeType.includes('quicktime')) {
+        extension = 'mp4'
+        mimeType = 'video/mp4'
+      } else if (mimeType.includes('webm')) {
+        extension = 'webm'
+        mimeType = 'video/webm'
+      } else if (!mimeType || mimeType === 'video/x-matroska' || mimeType === '') {
+        // iOS Safari sometimes returns empty or unusual types
+        // Default to mp4 for iOS, webm for others
+        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        extension = isIOSDevice ? 'mp4' : 'webm'
+        mimeType = isIOSDevice ? 'video/mp4' : 'video/webm'
+      }
+
+      // Create a new blob with explicit MIME type if needed
+      const videoBlob = recordedBlob.type ? recordedBlob : new Blob([recordedBlob], { type: mimeType })
+
+      // Step 1: Create FormData
+      let formData: FormData
+      try {
+        formData = new FormData()
+        formData.append('video', videoBlob, `checkin.${extension}`)
+        console.log('FormData created successfully')
+      } catch (formDataError) {
+        console.error('FormData creation failed:', formDataError)
+        throw new Error(`Failed to prepare video for upload: ${formDataError instanceof Error ? formDataError.message : 'Unknown error'}`)
+      }
 
       setRecordingState('processing')
 
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        body: formData,
-      })
+      // Step 2: Send request
+      // Use absolute URL for better iOS Safari compatibility
+      const apiUrl = new URL('/api/analyze', window.location.origin).toString()
+      console.log('Sending to:', apiUrl)
 
-      const result = await response.json()
+      let response: Response
+      try {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          body: formData,
+        })
+        console.log('Fetch completed, status:', response.status)
+      } catch (fetchError) {
+        console.error('Fetch failed:', fetchError)
+        throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`)
+      }
+
+      // Step 3: Parse response
+      let result
+      try {
+        result = await response.json()
+        console.log('Response parsed successfully')
+      } catch (parseError) {
+        console.error('Response parsing failed:', parseError)
+        throw new Error(`Failed to parse server response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+      }
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to analyze video')
