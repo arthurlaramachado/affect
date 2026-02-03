@@ -69,6 +69,25 @@ export function VideoCheckIn() {
     }
   }, [])
 
+  const getSupportedMimeType = useCallback((): string | undefined => {
+    // Order of preference: WebM VP9 > WebM VP8 > MP4 > default
+    const mimeTypes = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4',
+    ]
+
+    for (const mimeType of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        return mimeType
+      }
+    }
+
+    // Let browser choose default
+    return undefined
+  }, [])
+
   const startRecording = useCallback(async () => {
     setError(null)
     setRecordedBlob(null)
@@ -81,9 +100,10 @@ export function VideoCheckIn() {
       return
     }
 
-    const mediaRecorder = new MediaRecorder(streamRef.current, {
-      mimeType: 'video/webm;codecs=vp9,opus',
-    })
+    const mimeType = getSupportedMimeType()
+    const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {}
+
+    const mediaRecorder = new MediaRecorder(streamRef.current, recorderOptions)
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -92,7 +112,9 @@ export function VideoCheckIn() {
     }
 
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+      // Use the actual mimeType from the recorder, fallback to webm
+      const actualMimeType = mediaRecorder.mimeType || 'video/webm'
+      const blob = new Blob(chunksRef.current, { type: actualMimeType })
       setRecordedBlob(blob)
       setRecordingState('recorded')
       stopCamera()
@@ -140,8 +162,10 @@ export function VideoCheckIn() {
     setError(null)
 
     try {
+      // Determine file extension from blob type
+      const extension = recordedBlob.type.includes('mp4') ? 'mp4' : 'webm'
       const formData = new FormData()
-      formData.append('video', recordedBlob, 'check-in.webm')
+      formData.append('video', recordedBlob, `check-in.${extension}`)
 
       setRecordingState('processing')
 

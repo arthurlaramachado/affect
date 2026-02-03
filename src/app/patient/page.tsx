@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card'
 import { WelcomeCheckinCard } from '@/components/patient/WelcomeCheckinCard'
 import { NotificationBell } from '@/components/patient/NotificationBell'
+import { LogoutButton } from '@/components/LogoutButton'
 import { CheckCircle2 } from 'lucide-react'
 import type { User } from '@/lib/db/schema'
 
@@ -36,10 +37,13 @@ export default async function PatientDashboardPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      {/* Header with Notification Bell */}
+      {/* Header with Notification Bell and Logout */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Welcome, {user.name}</h1>
-        <NotificationBell initialCount={pendingCount} />
+        <div className="flex items-center gap-2">
+          <NotificationBell initialCount={pendingCount} />
+          <LogoutButton variant="outline" size="sm" />
+        </div>
       </div>
 
       {/* Stats - Only Current Streak and Total Check-ins */}

@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { NewFollowUpDialog } from './NewFollowUpDialog'
+import { LogoutButton } from '@/components/LogoutButton'
 import type { PatientSummary } from '@/lib/services/doctor.service'
 import type { RiskLevel } from '@/types/database'
 
@@ -88,9 +89,12 @@ export function DoctorDashboard({ patients, doctorName }: DoctorDashboardProps) 
           <h1 className="text-3xl font-bold">Doctor Dashboard</h1>
           <p className="text-gray-600">Welcome back, Dr. {doctorName}</p>
         </div>
-        <Button onClick={() => setIsFollowUpDialogOpen(true)}>
-          New Follow-Up
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFollowUpDialogOpen(true)}>
+            New Follow-Up
+          </Button>
+          <LogoutButton variant="outline" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
