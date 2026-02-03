@@ -7,8 +7,29 @@ import { checkInEligibilityService } from '@/lib/services/check-in-eligibility.s
 import type { User } from '@/lib/db/schema'
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
-const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+// Extended list of video MIME types for better device compatibility
+const ALLOWED_MIME_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-m4v',        // iOS variant of mp4
+  'video/3gpp',         // Mobile video format
+  'video/3gpp2',        // Mobile video format
+  'video/x-matroska',   // MKV format (some browsers)
+  'video/ogg',          // Ogg video
+  'video/mpeg',         // MPEG video
+]
 const DEFAULT_MODEL = 'gemini-2.0-flash'
+
+// Normalize MIME type for Gemini API (it prefers mp4)
+function normalizeVideoMimeType(mimeType: string): string {
+  // Gemini works best with mp4, so normalize compatible formats
+  const mp4Compatible = ['video/x-m4v', 'video/3gpp', 'video/3gpp2', 'video/quicktime']
+  if (mp4Compatible.includes(mimeType)) {
+    return 'video/mp4'
+  }
+  return mimeType
+}
 
 function getModelName(): string {
   return process.env.GEMINI_MODEL || DEFAULT_MODEL
@@ -135,7 +156,7 @@ OUTPUT: Return strictly valid JSON (no markdown) with this schema:
   }
 }`
 
-async function analyzeVideoWithGemini(filePath: string): Promise<GeminiAnalysis> {
+async function analyzeVideoWithGemini(filePath: string, mimeType: string): Promise<GeminiAnalysis> {
   const apiKey = process.env.GOOGLE_API_KEY
   if (!apiKey) {
     throw new Error('GOOGLE_API_KEY not configured')
@@ -147,10 +168,14 @@ async function analyzeVideoWithGemini(filePath: string): Promise<GeminiAnalysis>
 
   const ai = new GoogleGenAI({ apiKey })
 
+  // Normalize MIME type for Gemini compatibility
+  const normalizedMimeType = normalizeVideoMimeType(mimeType)
+  console.log('Uploading to Gemini with MIME type:', normalizedMimeType)
+
   // 1. Upload the video file
   const uploadResult = await ai.files.upload({
     file: filePath,
-    config: { mimeType: 'video/mp4' },
+    config: { mimeType: normalizedMimeType },
   })
 
   // 2. Wait for file to be processed
@@ -242,9 +267,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
       )
     }
 
-    if (!ALLOWED_MIME_TYPES.includes(videoFile.type)) {
+    // Log received MIME type for debugging
+    console.log('Received video MIME type:', videoFile.type)
+
+    // Accept any video/* type, or files with no type (some browsers)
+    const isVideoType = videoFile.type.startsWith('video/') || videoFile.type === ''
+    if (!isVideoType && !ALLOWED_MIME_TYPES.includes(videoFile.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Allowed: mp4, webm, mov' },
+        { success: false, error: `Invalid file type: ${videoFile.type}. Expected video format.` },
         { status: 400 }
       )
     }
@@ -252,8 +282,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
     // 5. Process video with transient storage
     const fileHandler = new FileHandler()
 
+    // Use file type or default to mp4 (most compatible with Gemini)
+    const videoMimeType = videoFile.type || 'video/mp4'
+
     const analysis = await fileHandler.withTempFile(videoFile, async (tempPath) => {
-      return await analyzeVideoWithGemini(tempPath)
+      return await analyzeVideoWithGemini(tempPath, videoMimeType)
     })
 
     // 6. Determine risk flag
