@@ -8,28 +8,8 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().url(),
   // Google AI (Gemini)
   GOOGLE_API_KEY: z.string().min(1),
-  // App (required in production so auth does not point to localhost)
-  NEXT_PUBLIC_APP_URL: z
-    .string()
-    .url()
-    .optional()
-    .default('http://localhost:3000')
-    .refine(
-      (val) => {
-        const isProduction =
-          process.env.VERCEL === '1' || process.env.NODE_ENV === 'production'
-        if (!isProduction) return true
-        return (
-          typeof val === 'string' &&
-          val.length > 0 &&
-          val !== 'http://localhost:3000'
-        )
-      },
-      {
-        message:
-          'NEXT_PUBLIC_APP_URL must be set to your production URL (e.g. https://your-app.vercel.app) when deploying to Vercel. See README for setup.',
-      }
-    ),
+  // App
+  NEXT_PUBLIC_APP_URL: z.string().url().optional().default('http://localhost:3000'),
 })
 
 export type Env = z.infer<typeof envSchema>
