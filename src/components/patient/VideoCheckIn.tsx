@@ -28,6 +28,7 @@ export function VideoCheckIn() {
 
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -41,6 +42,15 @@ export function VideoCheckIn() {
       videoRef.current.srcObject = streamRef.current
     }
   }, [recordingState])
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   const startCamera = useCallback(async () => {
     try {
@@ -171,11 +181,29 @@ export function VideoCheckIn() {
     }
 
     mediaRecorder.onstop = () => {
-      // Use the actual mimeType from the recorder, fallback to webm
-      const actualMimeType = mediaRecorder.mimeType || 'video/webm'
+      // Use the actual mimeType from the recorder
+      // On iOS Safari, mimeType might be empty - fallback to mp4 for iOS, webm for others
+      let actualMimeType = mediaRecorder.mimeType
+      if (!actualMimeType) {
+        actualMimeType = /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'video/mp4' : 'video/webm'
+      }
+
       const blob = new Blob(chunksRef.current, { type: actualMimeType })
-      setRecordedBlob(blob)
-      setRecordingState('recorded')
+
+      // Try to create preview URL - this can fail on some iOS versions
+      try {
+        const url = URL.createObjectURL(blob)
+        setPreviewUrl(url)
+        setRecordedBlob(blob)
+        setRecordingState('recorded')
+      } catch (err) {
+        console.error('Failed to create preview URL:', err)
+        // Still save the blob even if preview fails - we can submit without preview
+        setRecordedBlob(blob)
+        setRecordingState('recorded')
+        setError('Preview unavailable, but you can still submit the video.')
+      }
+
       stopCamera()
 
       if (timerRef.current) {
@@ -206,11 +234,16 @@ export function VideoCheckIn() {
   }, [])
 
   const retakeVideo = useCallback(() => {
+    // Clean up previous preview URL to avoid memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    setPreviewUrl(null)
     setRecordedBlob(null)
     setRecordingState('idle')
     setError(null)
     setAnalysisResult(null)
-  }, [])
+  }, [previewUrl])
 
   const submitVideo = useCallback(async () => {
     if (!recordedBlob) {
@@ -336,14 +369,28 @@ export function VideoCheckIn() {
         {recordingState === 'recorded' && recordedBlob && (
           <div className="space-y-4">
             <div className="aspect-video bg-black rounded-lg overflow-hidden">
-              <video
-                src={URL.createObjectURL(recordedBlob)}
-                controls
-                className="w-full h-full"
-              />
+              {previewUrl ? (
+                <video
+                  src={previewUrl}
+                  controls
+                  playsInline
+                  className="w-full h-full"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <svg className="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-sm text-gray-400">Preview unavailable</p>
+                  </div>
+                </div>
+              )}
             </div>
             <p className="text-sm text-center text-gray-500">
-              Review your recording. When ready, submit for analysis.
+              {previewUrl
+                ? 'Review your recording. When ready, submit for analysis.'
+                : 'Preview is not available on this device, but you can still submit.'}
             </p>
             <div className="flex gap-4">
               <Button onClick={retakeVideo} variant="outline" className="flex-1">
