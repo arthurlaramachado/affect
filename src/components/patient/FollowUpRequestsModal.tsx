@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ interface FollowUpRequestsModalProps {
 }
 
 export function FollowUpRequestsModal({ open, onOpenChange }: FollowUpRequestsModalProps) {
+  const router = useRouter()
   const [requests, setRequests] = useState<FollowUpRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -74,6 +76,11 @@ export function FollowUpRequestsModal({ open, onOpenChange }: FollowUpRequestsMo
       }
 
       setRequests((prev) => prev.filter((r) => r.id !== id))
+
+      // Refresh the page to update eligibility status after accepting
+      if (action === 'accept') {
+        router.refresh()
+      }
 
       if (requests.length === 1) {
         setTimeout(() => onOpenChange(false), 1000)

@@ -13,6 +13,7 @@ export interface FollowUpRepository {
   create(data: NewFollowUp): Promise<FollowUp>
   updateStatus(id: string, status: FollowUpStatus): Promise<FollowUp | null>
   getAcceptedPatientsByDoctorId(doctorId: string): Promise<FollowUp[]>
+  hasActiveFollowUpByPatientId(patientId: string): Promise<boolean>
 }
 
 export function createFollowUpRepository(db: NodePgDatabase): FollowUpRepository {
@@ -119,6 +120,21 @@ export function createFollowUpRepository(db: NodePgDatabase): FollowUpRepository
           )
         )
         .orderBy(desc(followUps.createdAt))
+    },
+
+    async hasActiveFollowUpByPatientId(patientId: string): Promise<boolean> {
+      const result = await db
+        .select()
+        .from(followUps)
+        .where(
+          and(
+            eq(followUps.patientId, patientId),
+            eq(followUps.status, 'accepted')
+          )
+        )
+        .limit(1)
+
+      return result.length > 0
     },
   }
 }

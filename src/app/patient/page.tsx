@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { dailyLogRepository, followUpRepository } from '@/lib/db/repositories'
+import { checkInEligibilityService } from '@/lib/services/check-in-eligibility.service'
 import {
   Card,
   CardContent,
@@ -26,9 +27,12 @@ export default async function PatientDashboardPage() {
     redirect('/')
   }
 
-  const recentLogs = await dailyLogRepository.findByUserId(user.id, 7)
-  const streakInfo = await dailyLogRepository.getStreak(user.id)
-  const pendingCount = await followUpRepository.getPendingCountByPatientId(user.id)
+  const [recentLogs, streakInfo, pendingCount, eligibility] = await Promise.all([
+    dailyLogRepository.findByUserId(user.id, 7),
+    dailyLogRepository.getStreak(user.id),
+    followUpRepository.getPendingCountByPatientId(user.id),
+    checkInEligibilityService.getEligibility(user.id),
+  ])
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -60,7 +64,7 @@ export default async function PatientDashboardPage() {
 
       {/* Welcome Check-in Card - Main Focal Point */}
       <div className="mb-8">
-        <WelcomeCheckinCard userName={user.name} />
+        <WelcomeCheckinCard userName={user.name} eligibility={eligibility} />
       </div>
 
       {/* Recent History - Simplified to show only dates */}

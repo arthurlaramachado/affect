@@ -305,4 +305,42 @@ describe('FollowUpRepository', () => {
       expect(result).toEqual(acceptedFollowUps)
     })
   })
+
+  describe('hasActiveFollowUpByPatientId', () => {
+    it('should return true when patient has an accepted follow-up', async () => {
+      const acceptedFollowUp: FollowUp = {
+        id: 'followup-1',
+        doctorId: 'doctor-123',
+        patientId: 'patient-123',
+        status: 'accepted',
+        message: null,
+        requestedAt: new Date(),
+        respondedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      mockDb.limit.mockResolvedValueOnce([acceptedFollowUp])
+
+      const result = await followUpRepository.hasActiveFollowUpByPatientId('patient-123')
+
+      expect(result).toBe(true)
+    })
+
+    it('should return false when patient has no accepted follow-up', async () => {
+      mockDb.limit.mockResolvedValueOnce([])
+
+      const result = await followUpRepository.hasActiveFollowUpByPatientId('patient-123')
+
+      expect(result).toBe(false)
+    })
+
+    it('should return false when patient only has pending follow-ups', async () => {
+      mockDb.limit.mockResolvedValueOnce([])
+
+      const result = await followUpRepository.hasActiveFollowUpByPatientId('patient-456')
+
+      expect(result).toBe(false)
+    })
+  })
 })

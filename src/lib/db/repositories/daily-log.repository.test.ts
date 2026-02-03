@@ -250,4 +250,54 @@ describe('DailyLogRepository', () => {
       expect(result).toEqual([])
     })
   })
+
+  describe('hasCheckedInToday', () => {
+    it('should return true when user has checked in today', async () => {
+      const today = new Date()
+      const todayLog: DailyLog = {
+        id: 'log-today',
+        userId: 'user-123',
+        moodScore: 7,
+        riskFlag: false,
+        analysisJson: mockAnalysis,
+        createdAt: today,
+      }
+
+      // Mock the chain: select().from().where().orderBy().limit()
+      mockDb.limit.mockResolvedValueOnce([todayLog])
+
+      const result = await dailyLogRepository.hasCheckedInToday('user-123')
+
+      expect(result).toBe(true)
+    })
+
+    it('should return false when user has no logs', async () => {
+      mockDb.limit.mockResolvedValueOnce([])
+
+      const result = await dailyLogRepository.hasCheckedInToday('user-123')
+
+      expect(result).toBe(false)
+    })
+
+    it('should return false when user last checked in yesterday', async () => {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      yesterday.setHours(12, 0, 0, 0) // Set to noon yesterday
+
+      const yesterdayLog: DailyLog = {
+        id: 'log-yesterday',
+        userId: 'user-123',
+        moodScore: 7,
+        riskFlag: false,
+        analysisJson: mockAnalysis,
+        createdAt: yesterday,
+      }
+
+      mockDb.limit.mockResolvedValueOnce([yesterdayLog])
+
+      const result = await dailyLogRepository.hasCheckedInToday('user-123')
+
+      expect(result).toBe(false)
+    })
+  })
 })

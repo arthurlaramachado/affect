@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth/session'
 import { FileHandler } from '@/lib/services/gemini/file-handler'
 import { dailyLogRepository } from '@/lib/db/repositories'
 import { parseGeminiResponse, type GeminiAnalysis } from '@/lib/services/gemini/schemas'
+import { checkInEligibilityService } from '@/lib/services/check-in-eligibility.service'
 import type { User } from '@/lib/db/schema'
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
@@ -213,7 +214,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
       )
     }
 
-    // 2. Parse form data
+    // 2. Check eligibility
+    const canCheckIn = await checkInEligibilityService.canPatientCheckIn(user.id)
+    if (!canCheckIn) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot check in. Make sure you are under follow-up with a doctor and have not already checked in today.' },
+        { status: 403 }
+      )
+    }
+
+    // 3. Parse form data
     const formData = await request.formData()
     const videoFile = formData.get('video') as File | null
 
@@ -224,7 +234,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
       )
     }
 
-    // 3. Validate file
+    // 4. Validate file
     if (videoFile.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { success: false, error: 'File size exceeds 100MB limit' },
@@ -239,21 +249,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
       )
     }
 
-    // 4. Process video with transient storage
+    // 5. Process video with transient storage
     const fileHandler = new FileHandler()
 
     const analysis = await fileHandler.withTempFile(videoFile, async (tempPath) => {
       return await analyzeVideoWithGemini(tempPath)
     })
 
-    // 5. Determine risk flag
+    // 6. Determine risk flag
     const riskFlag =
       analysis.risk_flags.suicidality_indicated ||
       analysis.risk_flags.self_harm_indicated ||
       analysis.risk_flags.severe_distress ||
       analysis.mood_score < 3
 
-    // 6. Save to database
+    // 7. Save to database
     const dailyLog = await dailyLogRepository.create({
       userId: user.id,
       moodScore: analysis.mood_score,

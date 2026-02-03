@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { VideoCheckIn } from '@/components/patient/VideoCheckIn'
+import { checkInEligibilityService } from '@/lib/services/check-in-eligibility.service'
 import type { User } from '@/lib/db/schema'
 
 export default async function PatientCheckInPage() {
@@ -14,6 +15,12 @@ export default async function PatientCheckInPage() {
 
   if (user.role !== 'patient') {
     redirect('/')
+  }
+
+  // Check if patient is eligible for check-in
+  const canCheckIn = await checkInEligibilityService.canPatientCheckIn(user.id)
+  if (!canCheckIn) {
+    redirect('/patient')
   }
 
   return (

@@ -18,6 +18,7 @@ export interface DailyLogRepository {
   getStreak(userId: string): Promise<StreakInfo>
   getLatestByUserId(userId: string): Promise<DailyLog | null>
   getMoodHistory(userId: string, days?: number): Promise<DailyLog[]>
+  hasCheckedInToday(userId: string): Promise<boolean>
 }
 
 function isSameDay(date1: Date, date2: Date): boolean {
@@ -173,6 +174,24 @@ export function createDailyLogRepository(db: NodePgDatabase): DailyLogRepository
         .where(eq(dailyLogs.userId, userId))
         .orderBy(desc(dailyLogs.createdAt))
         .limit(days)
+    },
+
+    async hasCheckedInToday(userId: string): Promise<boolean> {
+      const result = await db
+        .select()
+        .from(dailyLogs)
+        .where(eq(dailyLogs.userId, userId))
+        .orderBy(desc(dailyLogs.createdAt))
+        .limit(1)
+
+      if (result.length === 0) {
+        return false
+      }
+
+      const lastLogDate = new Date(result[0].createdAt)
+      const today = new Date()
+
+      return isSameDay(lastLogDate, today)
     },
   }
 }
