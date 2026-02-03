@@ -14,13 +14,12 @@
 ---
 
 ## 2. Tech Stack & Infrastructure
-- **Frontend:** Next.js 15 (App Router), Tailwind CSS, Shadcn/UI.
+- **Frontend:** Next.js 16 (App Router), Tailwind CSS, Shadcn/UI.
 - **Backend:** Next.js Server Actions (API Routes).
-- **Database:** PostgreSQL (Hosted on **Railway**).
+- **Database:** PostgreSQL (Hosted on **Supabase**).
 - **ORM:** Drizzle ORM.
 - **AI Model:** Google Gemini 3.0 Pro Preview (via Google AI SDK).
-- **Authentication:** Better-Auth or Auth.js (Magic Links).
-- **Email:** Resend (for sending invites).
+- **Authentication:** Better-Auth.
 - **Storage:** **None** (Local temporary storage only for processing).
 
 ---
@@ -149,8 +148,8 @@ export const invitations = pgTable("invitations", {
 ---
 
 ## 8. Implementation Checklist
-1.  **Setup:** Initialize Next.js, install Drizzle/Better-Auth, connect to Railway Postgres.
-2.  **Auth:** Implement Doctor Signup and the Invite System logic (Doctor generates link -> Patient signs up).
+1.  **Setup:** Initialize Next.js, install Drizzle/Better-Auth, connect to Supabase Postgres.
+2.  **Auth:** Implement Doctor Signup and Patient self-registration with follow-up system.
 3.  **API:** Build the `POST /api/analyze` route with the "Transient" file handling logic (Upload -> Gemini -> Delete).
 4.  **AI:** Integrate Google AI SDK with the System Prompt defined in Section 5.
 5.  **UI:** Build the Doctor Dashboard with Recharts and the Patient Recorder with MediaRecorder.

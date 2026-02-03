@@ -1,13 +1,15 @@
 import { z } from 'zod'
 
 const envSchema = z.object({
+  // Database (Supabase PostgreSQL)
   DATABASE_URL: z.string().url(),
+  // Authentication
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url(),
+  // Google AI (Gemini)
   GOOGLE_API_KEY: z.string().min(1),
-  RESEND_API_KEY: z.string().min(1),
+  // App
   NEXT_PUBLIC_APP_URL: z.string().url().optional().default('http://localhost:3000'),
-  EMAIL_FROM: z.string().optional().default('Affect <noreply@affect.health>'),
 })
 
 export type Env = z.infer<typeof envSchema>
