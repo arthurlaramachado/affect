@@ -22,6 +22,7 @@ import {
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // /dashboard will redirect to /patient or /doctor based on role
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)

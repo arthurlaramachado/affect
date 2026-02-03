@@ -39,13 +39,40 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check for session cookie
-  const sessionCookie = request.cookies.get('better-auth.session_token')
+  // Check for session cookie (name differs between HTTP and HTTPS)
+  const sessionCookie =
+    request.cookies.get('__Secure-better-auth.session_token') ||
+    request.cookies.get('better-auth.session_token')
 
   if (!sessionCookie) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // Handle /dashboard redirect based on role from session_data cookie
+  if (pathname === '/dashboard') {
+    const sessionDataCookie =
+      request.cookies.get('__Secure-better-auth.session_data') ||
+      request.cookies.get('better-auth.session_data')
+
+    if (sessionDataCookie) {
+      try {
+        const sessionData = JSON.parse(decodeURIComponent(sessionDataCookie.value))
+        const role = sessionData?.session?.user?.role
+
+        if (role === 'doctor') {
+          return NextResponse.redirect(new URL('/doctor', request.url))
+        }
+        // Default to patient dashboard
+        return NextResponse.redirect(new URL('/patient', request.url))
+      } catch {
+        // If parsing fails, default to patient
+        return NextResponse.redirect(new URL('/patient', request.url))
+      }
+    }
+    // No session data, default to patient
+    return NextResponse.redirect(new URL('/patient', request.url))
   }
 
   // For role-based access, we need to check the session
