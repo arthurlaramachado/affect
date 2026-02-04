@@ -7,25 +7,16 @@ import { checkInEligibilityService } from '@/lib/services/check-in-eligibility.s
 import type { User } from '@/lib/db/schema'
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
-// Extended list of video MIME types for better device compatibility
-const ALLOWED_MIME_TYPES = [
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-  'video/x-m4v',        // iOS variant of mp4
-  'video/3gpp',         // Mobile video format
-  'video/3gpp2',        // Mobile video format
-  'video/x-matroska',   // MKV format (some browsers)
-  'video/ogg',          // Ogg video
-  'video/mpeg',         // MPEG video
-]
 const DEFAULT_MODEL = 'gemini-2.0-flash'
 
-// Normalize MIME type for Gemini API (it prefers mp4)
+// Normalize MIME type for Gemini API - always use mp4 for best compatibility
 function normalizeVideoMimeType(mimeType: string): string {
-  // Gemini works best with mp4, so normalize compatible formats
-  const mp4Compatible = ['video/x-m4v', 'video/3gpp', 'video/3gpp2', 'video/quicktime']
-  if (mp4Compatible.includes(mimeType)) {
+  // If no type or unknown type, default to mp4
+  if (!mimeType || mimeType === '' || !mimeType.startsWith('video/')) {
+    return 'video/mp4'
+  }
+  // Gemini works best with mp4, so normalize all formats
+  if (mimeType !== 'video/webm') {
     return 'video/mp4'
   }
   return mimeType
@@ -267,17 +258,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeRe
       )
     }
 
-    // Log received MIME type for debugging
-    console.log('Received video MIME type:', videoFile.type)
-
-    // Accept any video/* type, or files with no type (some browsers)
-    const isVideoType = videoFile.type.startsWith('video/') || videoFile.type === ''
-    if (!isVideoType && !ALLOWED_MIME_TYPES.includes(videoFile.type)) {
-      return NextResponse.json(
-        { success: false, error: `Invalid file type: ${videoFile.type}. Expected video format.` },
-        { status: 400 }
-      )
-    }
+    // Log received MIME type for debugging (no validation - accept any type)
+    console.log('Received video MIME type:', videoFile.type || '(empty)')
 
     // 5. Process video with transient storage
     const fileHandler = new FileHandler()
